@@ -97,7 +97,7 @@
         <div class="mdl-tabs mdl-js-tabs mdl-js-ripple-effect mdl-cell mdl-cell--12-col"> 
           <div class="mdl-tabs__tab-bar">
              <a id="movies-tab" href="#movies-panel" class="mdl-tabs__tab is-active" v-on:click="setTabState('movie')">Movies</a>
-             <a id="tvshows-tab" href="#shows-panel" class="mdl-tabs__tab" v-on:click="setTabState('tvshow')">TV sShows</a>
+             <a id="tvshows-tab" href="#shows-panel" class="mdl-tabs__tab" v-on:click="setTabState('tvshow')">TV Shows</a>
              <a id="web-tab" href="#web-panel" class="mdl-tabs__tab" v-on:click="setTabState('web')">Web Stuff</a>
              <a id="apps-tab" href="#apps-panel" class="mdl-tabs__tab" v-on:click="setTabState('app')">Apps</a>
           </div>
@@ -130,7 +130,7 @@
           <div class="mdl-cell mdl-cell--12-col mdl-card__actions mdl-card--border">
             <form id="content-entry-form" action="#">
               <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                <input class="mdl-textfield__input" type="text" id="content-entry" autocomplete="off">
+                <input class="mdl-textfield__input" type="text" id="content-entry" autocomplete="off" v-model="newEntry">
                 <label class="mdl-textfield__label" for="content-entry">Entry...</label>
               </div>
               <button id="submit-entry" disabled type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">

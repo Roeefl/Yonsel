@@ -13,7 +13,8 @@ Vue.component('yonsel-item', {
 
 var app = new Vue({
   el: '#main-layout',
-  chatMsg: 'Haha',  
+  chatMsg: '...',
+  newEntry: '...',
   data: {
     tabState: TYPE_MOVIE,
     chatMessages: [
@@ -242,15 +243,22 @@ Yonsel.prototype.saveMessage = function(e) {
   // Check that the user entered a message and is signed in.
   if (app.chatMsg && this.checkSignedInWithMessage()) {
     var currentUser = this.auth.currentUser;
+    var photoUrl = currentUser.photoURL || '/images/profile_placeholder.png';
+
+    // Get the current chatMessage first so the Input can be cleared before waiting on firebase push
+    var msgValue = app.chatMsg;
+
+    // Clear message text field and SEND button state.
+    app.chatMsg = '';
+    this.toggleButton();
+
     // Add a new message entry to the Firebase Database.
     this.messagesRef.push({
       name: currentUser.displayName,
-      text: app.chatMsg,
-      photoUrl: currentUser.photoURL || '/images/profile_placeholder.png'
+      text: msgValue,
+      photoUrl: photoUrl
     }).then(function() {
-      // Clear message text field and SEND button state.
-      Yonsel.resetMaterialTextfield(this.messageInput);
-      this.toggleButton();
+      // no need to emitLog on chat messages
     }.bind(this)).catch(function(error) {
       console.error('Error writing new message to Firebase Database', error);
     });
@@ -262,21 +270,24 @@ Yonsel.prototype.saveContentEntry = function(e) {
   e.preventDefault();
 
   // Check that the user entered a message and is signed in.
-  if (this.entryInput.value && this.checkSignedInWithMessage()) {
+  if (app.newEntry && this.checkSignedInWithMessage()) {
     var currentUser = this.auth.currentUser;
+
+    // Get the current entry typed first so the Input can be cleared before waiting on firebase push
+    var entryValue = app.newEntry;
+
+    // Clear entry text field and SEND button state.
+    app.newEntry = '';
+    this.toggleEntryButton();
 
     // Add a new content entry to the Firebase Database.
     this.contentRef.push({
-      title: this.entryInput.value,
+      title: entryValue,
       type: app.tabState,
       hearts: []
     }).then(function() {
       // emitLog
-      this.emitLog(ACTION_ADD, currentUser.displayName, app.tabState, this.entryInput.value);
-
-      // Clear message text field and SEND button state.
-      Yonsel.resetMaterialTextfield(this.entryInput);
-      this.toggleEntryButton();
+      this.emitLog(ACTION_ADD, currentUser.displayName, app.tabState, entryValue);
     }.bind(this)).catch(function(error) {
       console.error('Error writing new entry to Firebase Database', error);
     });
@@ -330,7 +341,7 @@ Yonsel.prototype.toggleButton = function() {
 
 // Enables or disables the submit button depending on the values of the input fields
 Yonsel.prototype.toggleEntryButton = function() {
-  if (this.entryInput.value) {
+  if (app.newEntry) {
     this.submitEntry.removeAttribute('disabled');
   } else {
     this.submitEntry.setAttribute('disabled', 'true');
@@ -355,13 +366,6 @@ Yonsel.prototype.retrieveFullPath = function(picUrl) {
     return "url('/images/profile_placeholder.png')";
   }
 }
-
-// Resets the given MaterialTextField.
-Yonsel.resetMaterialTextfield = function(element) {
-  element.value = '';
-  element.parentNode.MaterialTextfield.boundUpdateClassesHandler();
-};
-
 
 /* -- Image-Related Functions -- */
 

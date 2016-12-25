@@ -43,6 +43,7 @@
 
   <!-- VueJS -->
   <script src="https://unpkg.com/vue/dist/vue.js"></script>
+  <script src="https://unpkg.com/vue-router/dist/vue-router.js"></script>
 
   <!-- Material Design -->
   <script defer src="https://code.getmdl.io/1.3.0/material.min.js"></script>
@@ -55,6 +56,7 @@
 
   <!-- Local -->
   <script src="scripts/constants.js"></script>
+  <script src="scripts/utilities.js"></script>
 </head>
 <body>
 
@@ -85,7 +87,7 @@
     <div class="mdl-grid grid-primary">
 
       <!-- Center Container -->
-      <div id="center-container" class="mdl-color--white mdl-shadow--2dp mdl-cell mdl-cell--12-col mdl-grid">
+      <div id="center-container" class="primary-container mdl-color--white mdl-shadow--2dp mdl-cell mdl-cell--12-col mdl-grid">
         <div class="mdl-layout__header">
            <div class="mdl-layout__header-row">      
               <span class="mdl-layout-title">Categories</span>          
@@ -95,16 +97,32 @@
         <div class="mdl-tabs mdl-js-tabs mdl-js-ripple-effect mdl-cell mdl-cell--12-col"> 
           <div class="mdl-tabs__tab-bar">
              <a id="movies-tab" href="#movies-panel" class="mdl-tabs__tab is-active" v-on:click="setTabState('movie')">Movies</a>
-             <a id="tvshows-tab" href="#shows-panel" class="mdl-tabs__tab" v-on:click="setTabState('tvshow')">Shows</a>
+             <a id="tvshows-tab" href="#shows-panel" class="mdl-tabs__tab" v-on:click="setTabState('tvshow')">TV sShows</a>
+             <a id="web-tab" href="#web-panel" class="mdl-tabs__tab" v-on:click="setTabState('web')">Web Stuff</a>
+             <a id="apps-tab" href="#apps-panel" class="mdl-tabs__tab" v-on:click="setTabState('app')">Apps</a>
           </div>
           <div class="mdl-tabs__panel center-panel is-active" id="movies-panel">
             <ul>
-              <movie-item v-for="movie in movies" v-bind:item="movie" v-bind:id="movie.key"></movie-item>
+              <yonsel-item class="yonsel-entry" v-for="movie in movies" v-bind:item="movie" v-bind:id="movie.key">
+              </yonsel-item>
             </ul>
           </div>
           <div class="mdl-tabs__panel center-panel" id="shows-panel">
             <ul>
-              <movie-item v-for="tvshow in tvshows" v-bind:item="tvshow" v-bind:id="tvshow.key"></movie-item>
+              <yonsel-item class="yonsel-entry" v-for="tvshow in tvshows" v-bind:item="tvshow" v-bind:id="tvshow.key">
+              </yonsel-item>
+            </ul>
+          </div>
+          <div class="mdl-tabs__panel center-panel" id="web-panel">
+            <ul>
+              <yonsel-item class="yonsel-entry" v-for="web in webstuff" v-bind:item="web" v-bind:id="web.key">
+              </yonsel-item>
+            </ul>
+          </div>
+          <div class="mdl-tabs__panel center-panel" id="apps-panel">
+            <ul>
+              <yonsel-item class="yonsel-entry" v-for="app in apps" v-bind:item="app" v-bind:id="app.key">
+              </yonsel-item>
             </ul>
           </div>
         </div>
@@ -112,7 +130,7 @@
           <div class="mdl-cell mdl-cell--12-col mdl-card__actions mdl-card--border">
             <form id="content-entry-form" action="#">
               <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                <input class="mdl-textfield__input" type="text" id="content-entry">
+                <input class="mdl-textfield__input" type="text" id="content-entry" autocomplete="off">
                 <label class="mdl-textfield__label" for="content-entry">Entry...</label>
               </div>
               <button id="submit-entry" disabled type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">
@@ -129,25 +147,28 @@
 
         <!-- Messages Container -->
         <div id="messages-card" class="mdl-card mdl-shadow--2dp mdl-cell mdl-cell--12-col mdl-cell--6-col-tablet mdl-cell--6-col-desktop">
+          <div class="mdl-card__title  mdl-shadow--3dp">
+            <h3 class="mdl-card__title-text">Chat</h3>
+          </div>
           <div class="mdl-card__supporting-text mdl-color-text--grey-600">
-            <h3>Chat</h3>
             <div id="messages" class="card-content">
 
-              <div class="message-container visible" v-for="chatMsg in chatMessages" v-bind:id="chatMsg.key">
+              <div class="data-container" v-for="chatMsg in chatMessages" v-bind:id="chatMsg.key">
                 <div class="spacing">
                   <div  class="avatar"
                         :style="{ backgroundImage: chatMsg.picUrl }"></div>
                 </div>
                 <div class="message">{{chatMsg.text}}</div>
-                <div class="name">{{chatMsg.name}}</div>
+                <!-- <div class="name">{{chatMsg.name}}</div> -->
               </div>
 
             </div>
           </div>
+
           <div class="mdl-card__actions mdl-card--border">
             <form id="message-form" action="#">
               <div class="mdl-textfield mdl-js-textfield mdl-textfield--floating-label">
-                <input class="mdl-textfield__input" type="text" id="message">
+                <input class="mdl-textfield__input" type="text" id="message" v-model="chatMsg" autocomplete="off">
                 <label class="mdl-textfield__label" for="message">Message...</label>
               </div>
               <button id="submit" disabled type="submit" class="mdl-button mdl-js-button mdl-button--raised mdl-js-ripple-effect">
@@ -162,16 +183,28 @@
               </button>
             </form>
           </div>
+
         </div>
         <!-- /Messages Container -->
 
         <!-- Logger Container -->
         <div  id="logger-card"
               class="mdl-card mdl-shadow--2dp mdl-cell mdl-cell--12-col mdl-cell--6-col-tablet mdl-cell--6-col-desktop">
+          <div class="mdl-card__title  mdl-shadow--2dp">
+            <h3 class="mdl-card__title-text ">Logger</h3>
+          </div>
           <div class="mdl-card__supporting-text mdl-color-text--grey-600">
-          <h3>Action Logger</h3>
             <div id="logger" class="card-content">
 
+              <div class="data-container" v-for="logEntry in logEntries" v-bind:id="logEntry.key">
+                <div class="spacing">
+                  <div  class="avatar"
+                        :style="{ backgroundImage: logEntry.picUrl }"></div>
+                </div>
+                <div class="message">{{logEntry.action}}</div>
+                <div class="name">{{logEntry.datetime}}</div>
+              </div>
+              
             </div>
           </div>
         </div>

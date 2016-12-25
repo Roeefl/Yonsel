@@ -1,61 +1,113 @@
-/* -- Main -- */
+/* ------------------
+  Eric Meyer's CSS Reset 2.0
+  http://meyerweb.com/eric/tools/css/reset/ 
+  v2.0 | 20110126
+  License: none (public domain)
+  ------------------
+*/
+
+html, body, div, span, applet, object, iframe,
+h1, h2, h3, h4, h5, h6, p, blockquote, pre,
+a, abbr, acronym, address, big, cite, code,
+del, dfn, em, img, ins, kbd, q, s, samp,
+small, strike, strong, sub, sup, tt, var,
+b, u, i, center,
+dl, dt, dd, ol, ul, li,
+fieldset, form, label, legend,
+table, caption, tbody, tfoot, thead, tr, th, td,
+article, aside, canvas, details, embed, 
+figure, figcaption, footer, header, hgroup, 
+menu, nav, output, ruby, section, summary,
+time, mark, audio, video {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 100%;
+  font: inherit;
+  vertical-align: baseline;
+}
+/* HTML5 display-role reset for older browsers */
+article, aside, details, figcaption, figure, 
+footer, header, hgroup, menu, nav, section {
+  display: block;
+}
+body {
+  line-height: 1;
+}
+ol, ul {
+  list-style: none;
+}
+blockquote, q {
+  quotes: none;
+}
+blockquote:before, blockquote:after,
+q:before, q:after {
+  content: '';
+  content: none;
+}
+table {
+  border-collapse: collapse;
+  border-spacing: 0;
+}
+
+/* -----------------
+    Basic Structure
+   ------------------
+*/
+
 html, body {
   font-family: 'Roboto', 'Helvetica', sans-serif;
 }
 
 main {
   height: 100%;
-  padding-bottom: 0;
 }
+
+/* -----------------
+    Layout
+   ------------------
+*/
+
+.primary-container {
+  align-items: center;
+}
+  .primary-container ul {
+    list-style: none;
+  }
+
+#bottom-container {
+  /* height: calc(100% - 150px); */
+  height: 500px;
+  margin-top: 20px;
+}
+
+.grid-primary {
+  max-width: 1200px;
+  margin: auto;
+}
+
+.mdl-card {
+  height: 100%;
+  min-height: 0;
+  background: linear-gradient(white, #ededed);
+  justify-content: space-between;
+}
+
+
+/* -----------------
+    Material Design Icons
+   ------------------
+*/
 
 .mdl-button .material-icons {
   top: -1px;
   margin-right: 5px;
 }
 
-/* -- Layout -- */
-.mdl-layout__header-row span {
-  margin-left: 15px;
-  margin-top: 17px;
-}
-
-#center-container {
-  align-items: center;
-}
-  #center-container ul {
-    list-style: none;
-  }
-
-#bottom-container {
-  /* height: calc(100% - 150px); */
-  height: 400px;
-  padding-bottom: 0;
-  margin-top: 20px;
-}
-
-.grid-primary {
-  max-width: 1024px;
-  margin: auto;
-}
-
-.mdl-card {
-  height: 100%;
-  padding-bottom: 0;
-  min-height: 0;
-  background: linear-gradient(white, #f9f9f9);
-  justify-content: space-between;
-}
-
-.mdl-card h3 {
-  margin: 8px;
-}
-
-/* -- Material Design Icons -- */
 .material-icons {
   top: 8px;
   position: relative;
 }
-
   /* Sizes for Material Icons */
   .material-icons.md-18 { font-size: 18px; }
   .material-icons.md-24 { font-size: 24px; }
@@ -73,17 +125,23 @@ main {
   /* Custom Colors */
   .material-icons.orange600 { color: #FB8C00; }
 
-/* -- Header -- */
+/* -----------------
+    Header
+   ------------------
+*/
 .mdl-layout__header-row {
   padding: 0;
   margin: 0 auto;
 }
+  .mdl-layout__header-row span {
+    margin-left: 10px;
+  }
 
 #user-container {
   position: absolute;
   display: flex;
   flex-direction: row;
-  top: 22px;
+  top: 24px;
   width: 100%;
   right: 0;
   padding-left: 10px;
@@ -108,60 +166,65 @@ main {
     padding-left: 20px;
   }
 
-/* -- Cards -- */
+/* -----------------
+    Cards
+   ------------------
+*/
+.mdl-card__title {
+  height: 50px;
+  margin: 0;
+  padding: 0;
+  background-color: #98AFC7;
+  color: #fff;
+  font-size: 100%;
+  margin: 10px;
+  padding: 10px;
+}
+
 .mdl-card__supporting-text {
   width: auto;
   height: 100%;
-  padding-top: 0;
-  padding-bottom: 0;
+  margin: 0;
+  padding: 0;
 }
 
 .card-content {
-  margin-bottom: 10px;
-  height: calc(100% - 80px);
-}
-
-#messages {
   overflow-y: scroll;
-}
-
-#logger {
-  overflow-y: hidden;
+  margin-bottom: 10px;
+  height: 100%;
 }
 
 /* -- Chat Message -- */
-.message-container:first-of-type {
+.data-container:first-of-type {
   border-top-width: 0;
 }
 
-.message-container {
+.data-container {
   display: block;
   margin-top: 10px;
   border-top: 1px solid #f3f3f3;
   padding-top: 10px;
-  opacity: 0;
+  opacity: 1;
+  margin-left: 6px;
   transition: opacity 1s ease-in-out;
 }
-  .message-container.visible {
-    opacity: 1;
-  }
-  .message-container .avatar {
+  .data-container .avatar {
     background-repeat: no-repeat;
     width: 30px;
     height: 30px;
     background-size: 30px;
     border-radius: 20px;
   }
-  .message-container .spacing {
+  .data-container .spacing {
     display: table-cell;
     vertical-align: top;
   }
-  .message-container .message {
+  .data-container .message {
     display: table-cell;
     width: calc(100% - 40px);
     padding: 5px 0 5px 10px;
   }
-  .message-container .name {
+  .data-container .name {
     display: inline-block;
     width: 100%;
     padding-left: 40px;

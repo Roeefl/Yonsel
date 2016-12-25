@@ -1,37 +1,71 @@
 'use strict';
 
-// Vue Components Registration
-Vue.component('movie-item', {
+/* -- Vue Components Registration -- */
+
+Vue.component('yonsel-item', {
   props: ['item'],
-  template: '<li>{{item.title}}</li>'
+  template:
+    '<li>{{item.title}} <button class="heart-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--black">Heart</button> <div v-for="heart in item.hearts">{{heart.user}}</div></li>'
 });
 
-// Initialize vue with dummy values
-// todo: remove dummy values
+
+/* -- Initialize vue with dummy values -- */
+
 var app = new Vue({
   el: '#main-layout',
+  chatMsg: 'Haha',  
   data: {
-    tabState: MOVIETYPE,
+    tabState: TYPE_MOVIE,
     chatMessages: [
       // { key: '1', name: 'a', text: 't', picUrl: 'null', imageUri: 'null' }
+    ],
+    logEntries: [
     ],
     movies: [
     ],
     tvshows: [
-
+    ],
+    webstuff: [
+    ],
+    apps: [
     ]
   },
+
+  // filters: {
+  //   reverse: function(array) {
+  //     return array.slice().reverse();
+  //   }
+  // },
+
   methods: {
     setTabState: function(newState) {
       this.tabState = newState;
     },
     removeChatMessage: function (index) {
       this.chatMessages.splice(index, 1);
+    },
+    pushYonselItem: function(type, key, title, hearts) {
+      if (type == TYPE_MOVIE) {
+        this.movies.push({ key: key, title: title, hearts: hearts });
+      } else if (type == TYPE_TVSHOW) {
+        this.tvshows.push({ key: key, title: title, hearts: hearts });
+      } else if (type == TYPE_WEB) {
+        this.webstuff.push({ key: key, title: title, hearts: hearts });
+      } else if (type == TYPE_APP) {
+        this.apps.push({ key: key, title: title, hearts: hearts });
+      }
+    },
+    pushLogEntry: function(key, action, picUrl, datetime) {
+      this.logEntries.push({ key: key, action: action, picUrl: picUrl, datetime: datetime });
     }
   }
 });
 
-// Initializes Yonsel.
+/* -- Initialize App -- */
+
+// A loading image URL.
+Yonsel.LOADING_IMAGE_URL = 'https://www.google.com/images/spin-32.gif';
+
 function Yonsel() {
   this.checkSetup();
 
@@ -49,9 +83,15 @@ function Yonsel() {
   this.signOutButton = document.getElementById('sign-out');
   this.signInSnackbar = document.getElementById('must-signin-snackbar');
 
+  this.logger = document.getElementById('logger');
+
   this.entryForm = document.getElementById('content-entry-form');
   this.entryInput = document.getElementById('content-entry');
   this.submitEntry = document.getElementById('submit-entry');
+
+  $(".heart-button").click(function() {
+    alert(this.id);
+  });
 
   // Saves message on form submit.
   this.messageForm.addEventListener('submit', this.saveMessage.bind(this));
@@ -78,15 +118,10 @@ function Yonsel() {
   this.mediaCapture.addEventListener('change', this.saveImageMessage.bind(this));
 
   // Update scrolling in chat after messages have finished loading
-  $('#messages').bind('DOMNodeInserted', this.updateScrollTop.bind(this));
+  $('#messages').bind('DOMNodeInserted', this.chatScrollTop.bind(this));
+  $('#logger').bind('DOMNodeInserted', this.loggerScrollTop.bind(this));
 
   this.initFirebase();
-}
-
-// Update scrolling in chat after messages have finished loading
-Yonsel.prototype.updateScrollTop = function() {
-  this.messageList.scrollTop = this.messageList.scrollHeight;
-  // this.messageInput.focus();
 }
 
 // Sets up shortcuts to Firebase features and initiate firebase auth.
@@ -99,8 +134,11 @@ Yonsel.prototype.initFirebase = function() {
   // Initiates Firebase auth and listen to auth state changes.
   this.auth.onAuthStateChanged(this.onAuthStateChanged.bind(this));
 
+  this.loadLog();
   this.loadContent();
 };
+
+/* -- Load Functions -- */
 
 // Loads main data from firebase and listens for data changes
 Yonsel.prototype.loadContent = function() {
@@ -112,11 +150,28 @@ Yonsel.prototype.loadContent = function() {
   // Loads all data and listens for data changes.
   var setContentEntry = function(data) {
     var val = data.val();
-    this.displayContentEntry(data.key, val.type, val.title);
+    this.displayContentEntry(data.key, val.type, val.title, val.hearts);
   }.bind(this);
 
   this.contentRef.on('child_added', setContentEntry);
   this.contentRef.on('child_changed', setContentEntry);
+}
+
+// Loads main data from firebase and listens for data changes
+Yonsel.prototype.loadLog = function() {
+  // Reference to the // database path.
+  this.logRef = this.database.ref('logger');
+  // Make sure we remove all previous listeners.
+  this.logRef.off();
+
+  // Loads all data and listens for data changes.
+  var setLogEntry = function(data) {
+    var val = data.val();
+    this.displayLogEntry(data.key, val.action, val.picUrl, val.datetime);
+  }.bind(this);
+
+  this.logRef.on('child_added', setLogEntry);
+  this.logRef.on('child_changed', setLogEntry);
 }
 
 // Loads chat messages history and listens for upcoming ones.
@@ -140,15 +195,10 @@ Yonsel.prototype.loadMessages = function() {
   this.messagesRef.limitToLast(12).on('child_removed', removeMessage);
 };
 
+/* -- Display Functions -- */
+
 // Displays a Message in the UI.
 Yonsel.prototype.displayMessage = function(key, name, text, picUrl, imageUri) {
-  // set picUrl to full path or to placeholder
-  if (picUrl) {
-    picUrl = "url('" + picUrl + "')";
-  } else {
-    picUrl = "url('/images/profile_placeholder.png')";
-  }
-
   // IMPLEMENT LATER
   //  if (imageUri) { // If the message is an image.
   //   var image = document.createElement('img');
@@ -163,23 +213,39 @@ Yonsel.prototype.displayMessage = function(key, name, text, picUrl, imageUri) {
   // Replace all line breaks by <br>.
   text = text.replace(/\n/g, '<br>');
 
+  // Full pathing for picUrl
+  picUrl = this.retrieveFullPath(picUrl);
+
   app.chatMessages.push({ key: key, name: name, text: text, picUrl: picUrl, imageUri: imageUri });
 
   // Timeout is commented out for now
   /* setTimeout(function() {div.classList.add('visible')}, 1); */
 };
 
+// Displays a content entry in the UI (movies, shows, etc)
+Yonsel.prototype.displayContentEntry = function(key, dataType, title, hearts) {
+  app.pushYonselItem(dataType, key, title, hearts);
+};
+
+// Displays a log entry in the UI
+Yonsel.prototype.displayLogEntry = function(key, action, picUrl, datetime) {
+  picUrl = this.retrieveFullPath(picUrl);
+  app.pushLogEntry(key, action, picUrl, datetime);
+};
+
+/* -- Save Functions -- */
+
 // Saves a new message on the Firebase DB.
 Yonsel.prototype.saveMessage = function(e) {
   e.preventDefault();
 
   // Check that the user entered a message and is signed in.
-  if (this.messageInput.value && this.checkSignedInWithMessage()) {
+  if (app.chatMsg && this.checkSignedInWithMessage()) {
     var currentUser = this.auth.currentUser;
     // Add a new message entry to the Firebase Database.
     this.messagesRef.push({
       name: currentUser.displayName,
-      text: this.messageInput.value,
+      text: app.chatMsg,
       photoUrl: currentUser.photoURL || '/images/profile_placeholder.png'
     }).then(function() {
       // Clear message text field and SEND button state.
@@ -202,8 +268,12 @@ Yonsel.prototype.saveContentEntry = function(e) {
     // Add a new content entry to the Firebase Database.
     this.contentRef.push({
       title: this.entryInput.value,
-      type: app.tabState
+      type: app.tabState,
+      hearts: []
     }).then(function() {
+      // emitLog
+      this.emitLog(ACTION_ADD, currentUser.displayName, app.tabState, this.entryInput.value);
+
       // Clear message text field and SEND button state.
       Yonsel.resetMaterialTextfield(this.entryInput);
       this.toggleEntryButton();
@@ -212,6 +282,88 @@ Yonsel.prototype.saveContentEntry = function(e) {
     });
   }
 }
+
+Yonsel.prototype.emitLog = function(actionType, username, contentType, title) {
+  if (actionType == ACTION_ADD) {
+    var action = (username + ' added ' + title + ' to ' + toTitleCase(contentType) + 's');
+  }
+
+  this.saveLogEntry(action);
+}
+
+// Saves a new log entry to the firebase DB
+Yonsel.prototype.saveLogEntry = function(action) {
+  var currentUser = this.auth.currentUser;
+  
+  var newDate = new Date();
+  var datetime = newDate.today() + " around " + newDate.timeNow();
+
+  this.logRef.push({
+    action: action,
+    picUrl: currentUser.photoURL || '/images/profile_placeholder.png',
+    datetime: datetime
+  }).then(function() {
+    // Nothing
+  }.bind(this)).catch(function(error) {
+    console.error('Error writing new log entry to Firebase Database', error);
+  });
+}
+
+/* -- Helper Functions -- */
+
+/* Transforms a string into Title Case */
+function toTitleCase(str) {
+    return str.replace(/(?:^|\s)\w/g, function(match) {
+        return match.toUpperCase();
+    });
+}
+
+// Enables or disables the submit button depending on the values of the input
+// fields.
+Yonsel.prototype.toggleButton = function() {
+  if (app.chatMsg) {
+    this.submitButton.removeAttribute('disabled');
+  } else {
+    this.submitButton.setAttribute('disabled', 'true');
+  }
+};
+
+// Enables or disables the submit button depending on the values of the input fields
+Yonsel.prototype.toggleEntryButton = function() {
+  if (this.entryInput.value) {
+    this.submitEntry.removeAttribute('disabled');
+  } else {
+    this.submitEntry.setAttribute('disabled', 'true');
+  }
+};
+
+// Update scrolling in chat after messages have finished loading
+Yonsel.prototype.chatScrollTop = function() {
+  this.messageList.scrollTop = this.messageList.scrollHeight;
+  // this.messageInput.focus();
+}
+Yonsel.prototype.loggerScrollTop = function() {
+  this.logger.scrollTop = this.logger.scrollHeight;
+}
+
+// returns picUrl with url attached or placeholder
+Yonsel.prototype.retrieveFullPath = function(picUrl) {
+  // set picUrl to full path or to placeholder
+  if (picUrl) {
+    return ("url('" + picUrl + "')");
+  } else {
+    return "url('/images/profile_placeholder.png')";
+  }
+}
+
+// Resets the given MaterialTextField.
+Yonsel.resetMaterialTextfield = function(element) {
+  element.value = '';
+  element.parentNode.MaterialTextfield.boundUpdateClassesHandler();
+};
+
+
+/* -- Image-Related Functions -- */
 
 // Sets the URL of the given img element with the URL of the image stored in Firebase Storage.
 Yonsel.prototype.setImageUrl = function(imageUri, imgElement) {
@@ -266,6 +418,8 @@ Yonsel.prototype.saveImageMessage = function(event) {
     }.bind(this));
   }
 };
+
+/* -- Sign-In Related Functions -- */
 
 // Signs-in Friendly Chat.
 Yonsel.prototype.signIn = function() {
@@ -328,49 +482,7 @@ Yonsel.prototype.checkSignedInWithMessage = function() {
   return false;
 };
 
-// Resets the given MaterialTextField.
-Yonsel.resetMaterialTextfield = function(element) {
-  element.value = '';
-  element.parentNode.MaterialTextfield.boundUpdateClassesHandler();
-};
-
-// Template for Content Entry.
-Yonsel.CONTENT_ENTRY_TEMPLATE =
-    '<div class="entry-container">' +
-      '<div class="entry-title"></div>' +
-    '</div>';
-
-// A loading image URL.
-Yonsel.LOADING_IMAGE_URL = 'https://www.google.com/images/spin-32.gif';
-
-// Displays a content entry in the UI (movies, shows, etc)
-Yonsel.prototype.displayContentEntry = function(key, dataType, title) {
-  if (dataType == MOVIETYPE) {
-    app.movies.push({ key: key, title: title });
-  }
-  if (dataType == TVSHOWTYPE) {
-    app.tvshows.push({ key: key, title: title });
-  }
-};
-
-// Enables or disables the submit button depending on the values of the input
-// fields.
-Yonsel.prototype.toggleButton = function() {
-  if (this.messageInput.value) {
-    this.submitButton.removeAttribute('disabled');
-  } else {
-    this.submitButton.setAttribute('disabled', 'true');
-  }
-};
-
-// Enables or disables the submit button depending on the values of the input fields
-Yonsel.prototype.toggleEntryButton = function() {
-  if (this.entryInput.value) {
-    this.submitEntry.removeAttribute('disabled');
-  } else {
-    this.submitEntry.setAttribute('disabled', 'true');
-  }
-};
+/* -- QA Functions -- */
 
 // Checks that the Firebase SDK has been correctly setup and configured.
 Yonsel.prototype.checkSetup = function() {
@@ -386,6 +498,8 @@ Yonsel.prototype.checkSetup = function() {
         'displayed there.');
   }
 };
+
+/* -- Window -- */
 
 window.onload = function() {
   window.yonsel = new Yonsel();

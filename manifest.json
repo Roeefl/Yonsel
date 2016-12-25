@@ -1,6 +1,6 @@
 {
-  "name": "Friendly Chat",
-  "short_name": "Friendly Chat",
+  "name": "Yonsel",
+  "short_name": "Yonsel",
   "start_url": "/index.html",
   "display": "standalone",
   "orientation": "portrait"

@@ -1,22 +1,38 @@
-/**
- * Copyright 2015 Google Inc. All Rights Reserved.
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *      http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
 'use strict';
 
-// Initializes FriendlyChat.
-function FriendlyChat() {
+// Vue Components Registration
+Vue.component('movie-item', {
+  props: ['item'],
+  template: '<li>{{item.title}}</li>'
+});
+
+// Initialize vue with dummy values
+// todo: remove dummy values
+var app = new Vue({
+  el: '#main-layout',
+  data: {
+    tabState: MOVIETYPE,
+    chatMessages: [
+      // { key: '1', name: 'a', text: 't', picUrl: 'null', imageUri: 'null' }
+    ],
+    movies: [
+    ],
+    tvshows: [
+
+    ]
+  },
+  methods: {
+    setTabState: function(newState) {
+      this.tabState = newState;
+    },
+    removeChatMessage: function (index) {
+      this.chatMessages.splice(index, 1);
+    }
+  }
+});
+
+// Initializes Yonsel.
+function Yonsel() {
   this.checkSetup();
 
   // Shortcuts to DOM Elements.
@@ -33,15 +49,27 @@ function FriendlyChat() {
   this.signOutButton = document.getElementById('sign-out');
   this.signInSnackbar = document.getElementById('must-signin-snackbar');
 
+  this.entryForm = document.getElementById('content-entry-form');
+  this.entryInput = document.getElementById('content-entry');
+  this.submitEntry = document.getElementById('submit-entry');
+
   // Saves message on form submit.
   this.messageForm.addEventListener('submit', this.saveMessage.bind(this));
   this.signOutButton.addEventListener('click', this.signOut.bind(this));
   this.signInButton.addEventListener('click', this.signIn.bind(this));
 
+  // Save Entries to Firebase
+  this.entryForm.addEventListener('submit', this.saveContentEntry.bind(this));
+
   // Toggle for the button.
   var buttonTogglingHandler = this.toggleButton.bind(this);
   this.messageInput.addEventListener('keyup', buttonTogglingHandler);
   this.messageInput.addEventListener('change', buttonTogglingHandler);
+
+  // Toggle for the entry button.
+  var entryButtonTogglingHandler = this.toggleEntryButton.bind(this);
+  this.entryInput.addEventListener('keyup', entryButtonTogglingHandler);
+  this.entryInput.addEventListener('change', entryButtonTogglingHandler);
 
   // Events for image upload.
   this.submitImageButton.addEventListener('click', function() {
@@ -49,11 +77,20 @@ function FriendlyChat() {
   }.bind(this));
   this.mediaCapture.addEventListener('change', this.saveImageMessage.bind(this));
 
+  // Update scrolling in chat after messages have finished loading
+  $('#messages').bind('DOMNodeInserted', this.updateScrollTop.bind(this));
+
   this.initFirebase();
 }
 
+// Update scrolling in chat after messages have finished loading
+Yonsel.prototype.updateScrollTop = function() {
+  this.messageList.scrollTop = this.messageList.scrollHeight;
+  // this.messageInput.focus();
+}
+
 // Sets up shortcuts to Firebase features and initiate firebase auth.
-FriendlyChat.prototype.initFirebase = function() {
+Yonsel.prototype.initFirebase = function() {
   // Shortcuts to Firebase SDK features.
   this.auth = firebase.auth();
   this.database = firebase.database();
@@ -61,10 +98,29 @@ FriendlyChat.prototype.initFirebase = function() {
 
   // Initiates Firebase auth and listen to auth state changes.
   this.auth.onAuthStateChanged(this.onAuthStateChanged.bind(this));
+
+  this.loadContent();
 };
 
+// Loads main data from firebase and listens for data changes
+Yonsel.prototype.loadContent = function() {
+  // Reference to the // database path.
+  this.contentRef = this.database.ref('content');
+  // Make sure we remove all previous listeners.
+  this.contentRef.off();
+
+  // Loads all data and listens for data changes.
+  var setContentEntry = function(data) {
+    var val = data.val();
+    this.displayContentEntry(data.key, val.type, val.title);
+  }.bind(this);
+
+  this.contentRef.on('child_added', setContentEntry);
+  this.contentRef.on('child_changed', setContentEntry);
+}
+
 // Loads chat messages history and listens for upcoming ones.
-FriendlyChat.prototype.loadMessages = function() {
+Yonsel.prototype.loadMessages = function() {
   // Reference to the /messages/ database path.
   this.messagesRef = this.database.ref('messages');
   // Make sure we remove all previous listeners.
@@ -75,13 +131,48 @@ FriendlyChat.prototype.loadMessages = function() {
     var val = data.val();
     this.displayMessage(data.key, val.name, val.text, val.photoUrl, val.imageUrl);
   }.bind(this);
+  var removeMessage = function(data) {
+    //app.removeChatMessage(data.key);
+  }.bind(this);
+
   this.messagesRef.limitToLast(12).on('child_added', setMessage);
   this.messagesRef.limitToLast(12).on('child_changed', setMessage);
+  this.messagesRef.limitToLast(12).on('child_removed', removeMessage);
+};
+
+// Displays a Message in the UI.
+Yonsel.prototype.displayMessage = function(key, name, text, picUrl, imageUri) {
+  // set picUrl to full path or to placeholder
+  if (picUrl) {
+    picUrl = "url('" + picUrl + "')";
+  } else {
+    picUrl = "url('/images/profile_placeholder.png')";
+  }
+
+  // IMPLEMENT LATER
+  //  if (imageUri) { // If the message is an image.
+  //   var image = document.createElement('img');
+  //   image.addEventListener('load', function() {
+  //     this.messageList.scrollTop = this.messageList.scrollHeight;
+  //   }.bind(this));
+  //   this.setImageUrl(imageUri, image);
+  //   messageElement.innerHTML = '';
+  //   messageElement.appendChild(image);
+  // }
+
+  // Replace all line breaks by <br>.
+  text = text.replace(/\n/g, '<br>');
+
+  app.chatMessages.push({ key: key, name: name, text: text, picUrl: picUrl, imageUri: imageUri });
+
+  // Timeout is commented out for now
+  /* setTimeout(function() {div.classList.add('visible')}, 1); */
 };
 
 // Saves a new message on the Firebase DB.
-FriendlyChat.prototype.saveMessage = function(e) {
+Yonsel.prototype.saveMessage = function(e) {
   e.preventDefault();
+
   // Check that the user entered a message and is signed in.
   if (this.messageInput.value && this.checkSignedInWithMessage()) {
     var currentUser = this.auth.currentUser;
@@ -92,7 +183,7 @@ FriendlyChat.prototype.saveMessage = function(e) {
       photoUrl: currentUser.photoURL || '/images/profile_placeholder.png'
     }).then(function() {
       // Clear message text field and SEND button state.
-      FriendlyChat.resetMaterialTextfield(this.messageInput);
+      Yonsel.resetMaterialTextfield(this.messageInput);
       this.toggleButton();
     }.bind(this)).catch(function(error) {
       console.error('Error writing new message to Firebase Database', error);
@@ -100,11 +191,33 @@ FriendlyChat.prototype.saveMessage = function(e) {
   }
 };
 
+// Saves a new entry to the firebase DB
+Yonsel.prototype.saveContentEntry = function(e) {
+  e.preventDefault();
+
+  // Check that the user entered a message and is signed in.
+  if (this.entryInput.value && this.checkSignedInWithMessage()) {
+    var currentUser = this.auth.currentUser;
+
+    // Add a new content entry to the Firebase Database.
+    this.contentRef.push({
+      title: this.entryInput.value,
+      type: app.tabState
+    }).then(function() {
+      // Clear message text field and SEND button state.
+      Yonsel.resetMaterialTextfield(this.entryInput);
+      this.toggleEntryButton();
+    }.bind(this)).catch(function(error) {
+      console.error('Error writing new entry to Firebase Database', error);
+    });
+  }
+}
+
 // Sets the URL of the given img element with the URL of the image stored in Firebase Storage.
-FriendlyChat.prototype.setImageUrl = function(imageUri, imgElement) {
+Yonsel.prototype.setImageUrl = function(imageUri, imgElement) {
   // If the image is a Firebase Storage URI we fetch the URL.
   if (imageUri.startsWith('gs://')) {
-    imgElement.src = FriendlyChat.LOADING_IMAGE_URL; // Display a loading image first.
+    imgElement.src = Yonsel.LOADING_IMAGE_URL; // Display a loading image first.
     this.storage.refFromURL(imageUri).getMetadata().then(function(metadata) {
       imgElement.src = metadata.downloadURLs[0];
     });
@@ -115,7 +228,7 @@ FriendlyChat.prototype.setImageUrl = function(imageUri, imgElement) {
 
 // Saves a new message containing an image URI in Firebase.
 // This first saves the image in Firebase storage.
-FriendlyChat.prototype.saveImageMessage = function(event) {
+Yonsel.prototype.saveImageMessage = function(event) {
   var file = event.target.files[0];
 
   // Clear the selection in the file picker input.
@@ -136,7 +249,7 @@ FriendlyChat.prototype.saveImageMessage = function(event) {
     var currentUser = this.auth.currentUser;
     this.messagesRef.push({
       name: currentUser.displayName,
-      imageUrl: FriendlyChat.LOADING_IMAGE_URL,
+      imageUrl: Yonsel.LOADING_IMAGE_URL,
       photoUrl: currentUser.photoURL || '/images/profile_placeholder.png'
     }).then(function(data) {
 
@@ -155,20 +268,20 @@ FriendlyChat.prototype.saveImageMessage = function(event) {
 };
 
 // Signs-in Friendly Chat.
-FriendlyChat.prototype.signIn = function() {
+Yonsel.prototype.signIn = function() {
   // Sign in Firebase using popup auth and Google as the identity provider.
   var provider = new firebase.auth.GoogleAuthProvider();
   this.auth.signInWithPopup(provider);
 };
 
 // Signs-out of Friendly Chat.
-FriendlyChat.prototype.signOut = function() {
+Yonsel.prototype.signOut = function() {
   // Sign out of Firebase.
   this.auth.signOut();
 };
 
 // Triggers when the auth state change for instance when the user signs-in or signs-out.
-FriendlyChat.prototype.onAuthStateChanged = function(user) {
+Yonsel.prototype.onAuthStateChanged = function(user) {
   if (user) { // User is signed in!
     // Get profile pic and user's name from the Firebase user object.
     var profilePicUrl = user.photoURL; // Only change these two lines!
@@ -186,7 +299,7 @@ FriendlyChat.prototype.onAuthStateChanged = function(user) {
     // Hide sign-in button.
     this.signInButton.setAttribute('hidden', 'true');
 
-    // We load currently existing chant messages.
+    // We load currently existing chat messages.
     this.loadMessages();
   } else { // User is signed out!
     // Hide user's profile and sign-out button.
@@ -200,7 +313,7 @@ FriendlyChat.prototype.onAuthStateChanged = function(user) {
 };
 
 // Returns true if user is signed-in. Otherwise false and displays a message.
-FriendlyChat.prototype.checkSignedInWithMessage = function() {
+Yonsel.prototype.checkSignedInWithMessage = function() {
   // Return true if the user is signed in Firebase
   if (this.auth.currentUser) {
     return true;
@@ -216,60 +329,33 @@ FriendlyChat.prototype.checkSignedInWithMessage = function() {
 };
 
 // Resets the given MaterialTextField.
-FriendlyChat.resetMaterialTextfield = function(element) {
+Yonsel.resetMaterialTextfield = function(element) {
   element.value = '';
   element.parentNode.MaterialTextfield.boundUpdateClassesHandler();
 };
 
-// Template for messages.
-FriendlyChat.MESSAGE_TEMPLATE =
-    '<div class="message-container">' +
-      '<div class="spacing"><div class="pic"></div></div>' +
-      '<div class="message"></div>' +
-      '<div class="name"></div>' +
+// Template for Content Entry.
+Yonsel.CONTENT_ENTRY_TEMPLATE =
+    '<div class="entry-container">' +
+      '<div class="entry-title"></div>' +
     '</div>';
 
 // A loading image URL.
-FriendlyChat.LOADING_IMAGE_URL = 'https://www.google.com/images/spin-32.gif';
+Yonsel.LOADING_IMAGE_URL = 'https://www.google.com/images/spin-32.gif';
 
-// Displays a Message in the UI.
-FriendlyChat.prototype.displayMessage = function(key, name, text, picUrl, imageUri) {
-  var div = document.getElementById(key);
-  // If an element for that message does not exists yet we create it.
-  if (!div) {
-    var container = document.createElement('div');
-    container.innerHTML = FriendlyChat.MESSAGE_TEMPLATE;
-    div = container.firstChild;
-    div.setAttribute('id', key);
-    this.messageList.appendChild(div);
+// Displays a content entry in the UI (movies, shows, etc)
+Yonsel.prototype.displayContentEntry = function(key, dataType, title) {
+  if (dataType == MOVIETYPE) {
+    app.movies.push({ key: key, title: title });
   }
-  if (picUrl) {
-    div.querySelector('.pic').style.backgroundImage = 'url(' + picUrl + ')';
+  if (dataType == TVSHOWTYPE) {
+    app.tvshows.push({ key: key, title: title });
   }
-  div.querySelector('.name').textContent = name;
-  var messageElement = div.querySelector('.message');
-  if (text) { // If the message is text.
-    messageElement.textContent = text;
-    // Replace all line breaks by <br>.
-    messageElement.innerHTML = messageElement.innerHTML.replace(/\n/g, '<br>');
-  } else if (imageUri) { // If the message is an image.
-    var image = document.createElement('img');
-    image.addEventListener('load', function() {
-      this.messageList.scrollTop = this.messageList.scrollHeight;
-    }.bind(this));
-    this.setImageUrl(imageUri, image);
-    messageElement.innerHTML = '';
-    messageElement.appendChild(image);
-  }
-  // Show the card fading-in.
-  setTimeout(function() {div.classList.add('visible')}, 1);
-  this.messageList.scrollTop = this.messageList.scrollHeight;
-  this.messageInput.focus();
 };
 
 // Enables or disables the submit button depending on the values of the input
 // fields.
-FriendlyChat.prototype.toggleButton = function() {
+Yonsel.prototype.toggleButton = function() {
   if (this.messageInput.value) {
     this.submitButton.removeAttribute('disabled');
   } else {
@@ -277,8 +363,17 @@ FriendlyChat.prototype.toggleButton = function() {
   }
 };
 
+// Enables or disables the submit button depending on the values of the input fields
+Yonsel.prototype.toggleEntryButton = function() {
+  if (this.entryInput.value) {
+    this.submitEntry.removeAttribute('disabled');
+  } else {
+    this.submitEntry.setAttribute('disabled', 'true');
+  }
+};
+
 // Checks that the Firebase SDK has been correctly setup and configured.
-FriendlyChat.prototype.checkSetup = function() {
+Yonsel.prototype.checkSetup = function() {
   if (!window.firebase || !(firebase.app instanceof Function) || !window.config) {
     window.alert('You have not configured and imported the Firebase SDK. ' +
         'Make sure you go through the codelab setup instructions.');
@@ -293,5 +388,6 @@ FriendlyChat.prototype.checkSetup = function() {
 };
 
 window.onload = function() {
-  window.friendlyChat = new FriendlyChat();
+  window.yonsel = new Yonsel();
 };
+ 

@@ -1,11 +1,11 @@
 {
-  "version": "1.0.0",
-  "name": "Friendly Chat",
+  "version": "0.1",
+  "name": "Yonsel",
   "launch_path": "/index.html",
-  "description": "Chat with friends using Firebase 2.0",
+  "description": "Share movie recommendations with friends,
   "developer": {
-    "name": "Google inc.",
-    "url": "https://firebase.google.com"
+    "name": "Roeefl",
+    "url": "https://roeefl.geometrio.net"
   },
   "installs_allowed_from": [
     "*"
@@ -15,8 +15,8 @@
   },
   "locales": {
     "en": {
-      "name": "Friendly Chat",
-      "description": "Chat with friends using Firebase 2.0"
+      "name": "Yonsel",
+      "description": "Share movie recommendations with friends"
     }
   }
 }

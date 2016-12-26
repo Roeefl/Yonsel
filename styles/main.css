@@ -82,7 +82,7 @@ main {
 }
 
 .grid-primary {
-  max-width: 1200px;
+  max-width: 1024px;
   margin: auto;
 }
 
@@ -98,19 +98,14 @@ main {
     Material Design Icons
    ------------------
 */
-
-.mdl-button .material-icons {
-  top: -1px;
-  margin-right: 5px;
-}
-
 .material-icons {
-  top: 8px;
-  position: relative;
+  padding: 0;
 }
+
   /* Sizes for Material Icons */
   .material-icons.md-18 { font-size: 18px; }
   .material-icons.md-24 { font-size: 24px; }
+  .material-icons.md-30 { font-size: 30px; }
   .material-icons.md-36 { font-size: 36px; }
   .material-icons.md-48 { font-size: 48px; }
 
@@ -124,6 +119,9 @@ main {
 
   /* Custom Colors */
   .material-icons.orange600 { color: #FB8C00; }
+  .material-icons.md-fire {
+    color: rgb(245, 130, 12);
+}
 
 /* -----------------
     Header
@@ -135,6 +133,10 @@ main {
 }
   .mdl-layout__header-row span {
     margin-left: 10px;
+  }
+  .mdl-layout__header-row .material-icons {
+  position: relative;
+  top: 6px;
   }
 
 #user-container {
@@ -167,6 +169,14 @@ main {
   }
 
 /* -----------------
+    Content (movies, etc)
+   ------------------
+*/
+.yonsel-entry {
+
+}
+
+/* -----------------
     Cards
    ------------------
 */
@@ -174,8 +184,6 @@ main {
   height: 50px;
   margin: 0;
   padding: 0;
-  background-color: #98AFC7;
-  color: #fff;
   font-size: 100%;
   margin: 10px;
   padding: 10px;
@@ -192,39 +200,46 @@ main {
   overflow-y: scroll;
   margin-bottom: 10px;
   height: 100%;
+  font-size: 80%;
 }
 
-/* -- Chat Message -- */
-.data-container:first-of-type {
-  border-top-width: 0;
-}
-
-.data-container {
+/* -----------------
+    Data Entry: Chat Message / Log Entry / Content Entry
+   ------------------
+*/
+.data-entry {
   display: block;
   margin-top: 10px;
-  border-top: 1px solid #f3f3f3;
+  border-top: 2px solid #f3f3f3;
   padding-top: 10px;
   opacity: 1;
   margin-left: 6px;
   transition: opacity 1s ease-in-out;
 }
-  .data-container .avatar {
+  .data-entry:first-of-type {
+    border-top-width: 0;
+  }
+  .data-entry .fire-button {
+    margin: 0 0 0 6px;
+    padding: 0;
+  }
+  .data-entry .avatar {
     background-repeat: no-repeat;
     width: 30px;
     height: 30px;
     background-size: 30px;
     border-radius: 20px;
   }
-  .data-container .spacing {
+  .data-entry .spacing {
     display: table-cell;
     vertical-align: top;
   }
-  .data-container .message {
+  .data-entry .message {
     display: table-cell;
     width: calc(100% - 40px);
     padding: 5px 0 5px 10px;
   }
-  .data-container .name {
+  .data-entry .name {
     display: inline-block;
     width: 100%;
     padding-left: 40px;
@@ -239,7 +254,10 @@ main {
   max-height: 200px;
 }
 
-/* -- Chat Message Forms-- */
+/* -----------------
+    Chat Forms
+   ------------------
+*/
 #message-form {
   display: flex;
   flex-direction: row;
@@ -279,7 +297,10 @@ main {
     display: none;
   }
 
-/* -- Smartphones -- */
+/* -----------------
+    Media: Small
+   ------------------
+*/
 @media screen and (max-width: 610px) {
   header {
     height: 113px;

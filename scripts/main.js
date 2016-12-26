@@ -1,34 +1,76 @@
 'use strict';
 
+// Constants
+var TYPE_MOVIE = 'movie';
+var TYPE_TVSHOW = 'tvshow';
+var TYPE_WEB = 'web';
+var TYPE_APP = 'appl';
+// var TYPE_ALBUM = 'album';
+
+var ACTION_ADD = 'add';
+var ACTION_FIRE = 'fire'
+var ACTION_UNFIRE = 'unfire';
+
+var USER_NONE = '!';
+
 /* -- Vue Components Registration -- */
 
 Vue.component('yonsel-item', {
   props: ['item'],
+
   template:
-    '<li>{{item.title}} <button class="heart-button mdl-button mdl-js-button mdl-js-ripple-effect mdl-color-text--black">Heart</button> <div v-for="heart in item.hearts">{{heart.user}}</div></li>'
+    '<li>' + 
+      '<span>{{item.title}}</span>' +
+      '<button @click="fireClick" class="fire-button mdl-button mdl-js-button mdl-button--accent">' + 
+        '<span class="mdl-badge" v-bind:data-badge="(item.fires ? item.fires.length : 0)">' + 
+          '<i class="material-icons md-fire md-30 md-light">whatshot</i>' + 
+        '</span>' + 
+      '</button>' + 
+      /* '<div v-for="fire in item.fires">' +
+        '{{fire.user}}' + 
+      '</div>' + */
+    '</li>',
+
+    methods:
+      {
+        fireClick: function(event) {
+          this.$emit('fireclick', this.item.key);
+        }
+    }
 });
+
 
 
 /* -- Initialize vue with dummy values -- */
 
 var app = new Vue({
+
   el: '#main-layout',
   chatMsg: '...',
   newEntry: '...',
+
   data: {
+    TYPE_MOVIE: 'movie',
+    TYPE_TVSHOW: 'tvshow',
+    TYPE_WEB: 'web',
+    TYPE_APPL: 'appl',
+
     tabState: TYPE_MOVIE,
+
+    panels: [
+      { key: 0, id: 'movies-panel', items: [] },
+      { key: 1, id: 'shows-panel', items: [] },
+      { key: 2, id: 'web-panel', items: [] },
+      { key: 3, id: 'apps-panel', items: [] },
+    ],    
+
     chatMessages: [
       // { key: '1', name: 'a', text: 't', picUrl: 'null', imageUri: 'null' }
     ],
     logEntries: [
     ],
-    movies: [
-    ],
-    tvshows: [
-    ],
-    webstuff: [
-    ],
-    apps: [
+
+    content: [
     ]
   },
 
@@ -42,22 +84,28 @@ var app = new Vue({
     setTabState: function(newState) {
       this.tabState = newState;
     },
+    filterContent: function(typeFilter) {
+      return this.content.filter( function(item) {
+        return item.type == typeFilter;
+      })
+    },
     removeChatMessage: function (index) {
       this.chatMessages.splice(index, 1);
     },
-    pushYonselItem: function(type, key, title, hearts) {
-      if (type == TYPE_MOVIE) {
-        this.movies.push({ key: key, title: title, hearts: hearts });
-      } else if (type == TYPE_TVSHOW) {
-        this.tvshows.push({ key: key, title: title, hearts: hearts });
-      } else if (type == TYPE_WEB) {
-        this.webstuff.push({ key: key, title: title, hearts: hearts });
-      } else if (type == TYPE_APP) {
-        this.apps.push({ key: key, title: title, hearts: hearts });
-      }
+    pushContentItem: function(key, type, title, fires) {
+      this.content.push( {key: key, type: type, title: title, fires: fires} );
     },
     pushLogEntry: function(key, action, picUrl, datetime) {
       this.logEntries.push({ key: key, action: action, picUrl: picUrl, datetime: datetime });
+    },
+    pushChatMsg: function(key, name, text, picUrl, imageUri) {
+      this.chatMessages.push({ key: key, name: name, text: text, picUrl: picUrl, imageUri: imageUri });
+    },
+    toggleFire: function(key) {
+      yonsel.toggleFire(key);
+    },
+    updateContentItem: function(ind, updatedItem) {
+      Vue.set(app.content, ind, updatedItem);
     }
   }
 });
@@ -69,6 +117,8 @@ Yonsel.LOADING_IMAGE_URL = 'https://www.google.com/images/spin-32.gif';
 
 function Yonsel() {
   this.checkSetup();
+
+  var currentUser = USER_NONE;
 
   // Shortcuts to DOM Elements.
   this.messageList = document.getElementById('messages');
@@ -90,12 +140,8 @@ function Yonsel() {
   this.entryInput = document.getElementById('content-entry');
   this.submitEntry = document.getElementById('submit-entry');
 
-  $(".heart-button").click(function() {
-    alert(this.id);
-  });
-
   // Saves message on form submit.
-  this.messageForm.addEventListener('submit', this.saveMessage.bind(this));
+  this.messageForm.addEventListener('submit', this.saveChatEntry.bind(this));
   this.signOutButton.addEventListener('click', this.signOut.bind(this));
   this.signInButton.addEventListener('click', this.signIn.bind(this));
 
@@ -135,11 +181,11 @@ Yonsel.prototype.initFirebase = function() {
   // Initiates Firebase auth and listen to auth state changes.
   this.auth.onAuthStateChanged(this.onAuthStateChanged.bind(this));
 
-  this.loadLog();
+  this.loadLogger();
   this.loadContent();
 };
 
-/* -- Load Functions -- */
+/* -- Content Functions -- */
 
 // Loads main data from firebase and listens for data changes
 Yonsel.prototype.loadContent = function() {
@@ -151,32 +197,94 @@ Yonsel.prototype.loadContent = function() {
   // Loads all data and listens for data changes.
   var setContentEntry = function(data) {
     var val = data.val();
-    this.displayContentEntry(data.key, val.type, val.title, val.hearts);
+    this.displayContentEntry(data.key, val.type, val.title, val.fires);
+  }.bind(this);
+
+  // Updates content entry
+  var updateContentEntry = function(data) {
+    var val = data.val();
+
+    var currentItem = app.content.find(x => x.key === data.key);
+    // If the item exists, update all fields to the ones retrieved from FireBase
+    if (currentItem) {
+      var ind = app.content.indexOf(currentItem);
+      var updatedItem = { key: data.key, type: val.type, title: val.title, fires: val.fires };
+      app.updateContentItem(ind, updatedItem);
+    }
   }.bind(this);
 
   this.contentRef.on('child_added', setContentEntry);
-  this.contentRef.on('child_changed', setContentEntry);
+  this.contentRef.on('child_changed', updateContentEntry);
 }
 
-// Loads main data from firebase and listens for data changes
-Yonsel.prototype.loadLog = function() {
-  // Reference to the // database path.
-  this.logRef = this.database.ref('logger');
-  // Make sure we remove all previous listeners.
-  this.logRef.off();
+// Displays a content entry in the UI (movies, shows, etc)
+Yonsel.prototype.displayContentEntry = function(key, type, title, fires) {
+  app.pushContentItem(key, type, title, fires);
+};
 
-  // Loads all data and listens for data changes.
-  var setLogEntry = function(data) {
-    var val = data.val();
-    this.displayLogEntry(data.key, val.action, val.picUrl, val.datetime);
-  }.bind(this);
+// Saves a new entry to the firebase DB
+Yonsel.prototype.saveContentEntry = function(e) {
+  e.preventDefault();
 
-  this.logRef.on('child_added', setLogEntry);
-  this.logRef.on('child_changed', setLogEntry);
+  // Check that the user entered a message and is signed in.
+  if (app.newEntry && this.checkSignedInWithMessage()) {
+    var currentUser = this.auth.currentUser;
+
+    // Get the current entry typed first so the Input can be cleared before waiting on firebase push
+    var entryValue = app.newEntry;
+
+    // Clear entry text field and SEND button state.
+    app.newEntry = '';
+    this.toggleEntryButton();
+
+    // Add a new content entry to the Firebase Database.
+    this.contentRef.push({
+      title: entryValue,
+      type: app.tabState,
+      fires: []
+    }).then(function() {
+      // emit logger action
+      this.emitLog(ACTION_ADD, currentUser.displayName, entryValue, app.tabState);
+    }.bind(this)).catch(function(error) {
+      console.error('Error writing new entry to Firebase Database', error);
+    });
+  }
 }
+
+Yonsel.prototype.toggleFire = function(entryKey) {
+  var name = this.auth.currentUser.displayName;
+  var firePath = '/' + entryKey;
+
+  var currItem = app.content.find(x => x.key === entryKey);
+
+  if (currItem) {
+    var currFires = currItem.fires;
+    
+    var fires = [];
+    if (currFires) {
+      fires = currFires;
+    }
+
+    var userInFires = fires.find(y => y === name);
+    if (userInFires) {
+      var ind = fires.indexOf(name);
+      fires.splice(ind, 1);
+      this.emitLog(ACTION_UNFIRE, name, currItem.title);
+    } else {
+      fires.push(name);
+      this.emitLog(ACTION_FIRE, name, currItem.title);
+    }
+
+    this.contentRef.child(firePath).update({ fires: fires });
+  } else {
+    alert("SUPER ERROR! WTF")
+  }
+}
+
+/* -- Chat Functions -- */
 
 // Loads chat messages history and listens for upcoming ones.
-Yonsel.prototype.loadMessages = function() {
+Yonsel.prototype.loadChat = function() {
   // Reference to the /messages/ database path.
   this.messagesRef = this.database.ref('messages');
   // Make sure we remove all previous listeners.
@@ -185,7 +293,7 @@ Yonsel.prototype.loadMessages = function() {
   // Loads the last 12 messages and listen for new ones.
   var setMessage = function(data) {
     var val = data.val();
-    this.displayMessage(data.key, val.name, val.text, val.photoUrl, val.imageUrl);
+    this.displayChatEntry(data.key, val.name, val.text, val.photoUrl, val.imageUrl);
   }.bind(this);
   var removeMessage = function(data) {
     //app.removeChatMessage(data.key);
@@ -196,10 +304,8 @@ Yonsel.prototype.loadMessages = function() {
   this.messagesRef.limitToLast(12).on('child_removed', removeMessage);
 };
 
-/* -- Display Functions -- */
-
 // Displays a Message in the UI.
-Yonsel.prototype.displayMessage = function(key, name, text, picUrl, imageUri) {
+Yonsel.prototype.displayChatEntry = function(key, name, text, picUrl, imageUri) {
   // IMPLEMENT LATER
   //  if (imageUri) { // If the message is an image.
   //   var image = document.createElement('img');
@@ -217,27 +323,14 @@ Yonsel.prototype.displayMessage = function(key, name, text, picUrl, imageUri) {
   // Full pathing for picUrl
   picUrl = this.retrieveFullPath(picUrl);
 
-  app.chatMessages.push({ key: key, name: name, text: text, picUrl: picUrl, imageUri: imageUri });
+  app.pushChatMsg(key, name, text, picUrl, imageUri);
 
   // Timeout is commented out for now
   /* setTimeout(function() {div.classList.add('visible')}, 1); */
 };
 
-// Displays a content entry in the UI (movies, shows, etc)
-Yonsel.prototype.displayContentEntry = function(key, dataType, title, hearts) {
-  app.pushYonselItem(dataType, key, title, hearts);
-};
-
-// Displays a log entry in the UI
-Yonsel.prototype.displayLogEntry = function(key, action, picUrl, datetime) {
-  picUrl = this.retrieveFullPath(picUrl);
-  app.pushLogEntry(key, action, picUrl, datetime);
-};
-
-/* -- Save Functions -- */
-
 // Saves a new message on the Firebase DB.
-Yonsel.prototype.saveMessage = function(e) {
+Yonsel.prototype.saveChatEntry = function(e) {
   e.preventDefault();
 
   // Check that the user entered a message and is signed in.
@@ -265,42 +358,30 @@ Yonsel.prototype.saveMessage = function(e) {
   }
 };
 
-// Saves a new entry to the firebase DB
-Yonsel.prototype.saveContentEntry = function(e) {
-  e.preventDefault();
+/* -- Logger Functions -- */
 
-  // Check that the user entered a message and is signed in.
-  if (app.newEntry && this.checkSignedInWithMessage()) {
-    var currentUser = this.auth.currentUser;
+// Loads main data from firebase and listens for data changes
+Yonsel.prototype.loadLogger = function() {
+  // Reference to the // database path.
+  this.logRef = this.database.ref('logger');
+  // Make sure we remove all previous listeners.
+  this.logRef.off();
 
-    // Get the current entry typed first so the Input can be cleared before waiting on firebase push
-    var entryValue = app.newEntry;
+  // Loads all data and listens for data changes.
+  var setLogEntry = function(data) {
+    var val = data.val();
+    this.displayLogEntry(data.key, val.action, val.picUrl, val.datetime);
+  }.bind(this);
 
-    // Clear entry text field and SEND button state.
-    app.newEntry = '';
-    this.toggleEntryButton();
-
-    // Add a new content entry to the Firebase Database.
-    this.contentRef.push({
-      title: entryValue,
-      type: app.tabState,
-      hearts: []
-    }).then(function() {
-      // emitLog
-      this.emitLog(ACTION_ADD, currentUser.displayName, app.tabState, entryValue);
-    }.bind(this)).catch(function(error) {
-      console.error('Error writing new entry to Firebase Database', error);
-    });
-  }
+  this.logRef.on('child_added', setLogEntry);
+  this.logRef.on('child_changed', setLogEntry);
 }
 
-Yonsel.prototype.emitLog = function(actionType, username, contentType, title) {
-  if (actionType == ACTION_ADD) {
-    var action = (username + ' added ' + title + ' to ' + toTitleCase(contentType) + 's');
-  }
-
-  this.saveLogEntry(action);
-}
+// Displays a log entry in the UI
+Yonsel.prototype.displayLogEntry = function(key, action, picUrl, datetime) {
+  picUrl = this.retrieveFullPath(picUrl);
+  app.pushLogEntry(key, action, picUrl, datetime);
+};
 
 // Saves a new log entry to the firebase DB
 Yonsel.prototype.saveLogEntry = function(action) {
@@ -320,7 +401,47 @@ Yonsel.prototype.saveLogEntry = function(action) {
   });
 }
 
-/* -- Helper Functions -- */
+/* -- Support Functions -- */
+
+// For todays date;
+Date.prototype.today = function () { 
+    return ((this.getDate() < 10)?"0":"") + this.getDate() +"/"+(((this.getMonth()+1) < 10)?"0":"") + (this.getMonth()+1) +"/"+ this.getFullYear();
+}
+
+// For the time now
+Date.prototype.timeNow = function () {
+     return ((this.getHours() < 10)?"0":"") + this.getHours() +":"+ ((this.getMinutes() < 10)?"0":"") + this.getMinutes() ;
+     // +":"+ ((this.getSeconds() < 10)?"0":"") + this.getSeconds();
+}
+
+/*  if exists: Find whether object exists in the array 
+    otherwise: Pluck the object from the array
+*/
+function pluckByName(inArr, name, exists)
+{
+    for (i = 0; i < inArr.length; i++ )
+    {
+        if (inArr[i].name == name)
+        {
+            return (exists === true) ? true : inArr[i];
+        }
+    }
+}
+
+/* Save new log entry into the logger */
+Yonsel.prototype.emitLog = function(actionType, username, title, contentType = '') {
+  if (actionType == ACTION_ADD) {
+    var action = (username + ' added ' + title + ' to ' + toTitleCase(contentType) + 's');
+  }
+  if (actionType == ACTION_FIRE) {
+    var action = (username + ' marked ' + title + ' as #Fire');
+  }
+  if (actionType == ACTION_UNFIRE) {
+    var action = (username + ' unmarked ' + title + ' as #Fire');
+  }
+
+  this.saveLogEntry(action);
+}
 
 /* Transforms a string into Title Case */
 function toTitleCase(str) {
@@ -458,7 +579,7 @@ Yonsel.prototype.onAuthStateChanged = function(user) {
     this.signInButton.setAttribute('hidden', 'true');
 
     // We load currently existing chat messages.
-    this.loadMessages();
+    this.loadChat();
   } else { // User is signed out!
     // Hide user's profile and sign-out button.
     this.userName.setAttribute('hidden', 'true');

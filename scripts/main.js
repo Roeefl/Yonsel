@@ -1,12 +1,5 @@
 'use strict';
 
-// Constants
-var TYPE_MOVIE = 'movie';
-var TYPE_TVSHOW = 'tvshow';
-var TYPE_WEB = 'web';
-var TYPE_APP = 'appl';
-// var TYPE_ALBUM = 'album';
-
 var ACTION_ADD = 'add';
 var ACTION_FIRE = 'fire'
 var ACTION_UNFIRE = 'unfire';
@@ -15,71 +8,176 @@ var USER_NONE = '!';
 
 /* -- Vue Components Registration -- */
 
-Vue.component('yonsel-item', {
+const Home = { template: '<div>Home</div>' }
+const Bar = { template: '<div>bar</div>' }
+
+const routes = [
+  { path: '/', component: Home },
+  { path: '/bar', component: Bar }
+]
+
+var router = new VueRouter({
+  mode: 'hash',
+  base: window.location.href,
+  routes: routes
+});
+
+
+Vue.component('tab-item', {
+  props: ['tab'], 
+
+  template:
+    '<a :id="fullId" :href="fullHref" @click="tabClick">' +
+      '{{tab.title}}' +
+    '</a>',
+
+  computed: {
+    fullId: function() {
+      return this.tab.id + '-tab';
+    },
+    fullHref: function () {
+      return '#' + this.tab.id + '-panel';
+    }
+  },
+
+  methods:
+    {
+      tabClick: function(event) {
+        this.$emit('tabclick');
+      }
+    }
+});
+
+Vue.component('panel-item', {
+  props: ['panel'], 
+
+  template:
+    '<div :id="fullId">' +
+      '<slot name="contentItems"></slot>' +
+    '</div>',
+
+    computed: {
+      fullId: function() {
+        return this.panel.id + '-panel';
+      }
+    }
+});
+
+Vue.component('chatmsg-entry', {
+  props: ['item'], 
+
+  template:
+    '<div>' +
+      '<div class="spacing">' +
+          '<div class="avatar" :style="{ backgroundImage: item.picUrl }"></div>' +
+      '</div>' +
+      '<div class="entry-text">' +
+        '{{item.text}}' +
+      '</div>' +
+      // '<div class="name">' +
+      //   '{{item.name}}' +
+      // '</div>' + 
+    '</div>'
+});
+
+Vue.component('log-entry', {
+  props: ['item'], 
+
+  template:
+    '<div>' +
+      '<div class="spacing">' +
+          '<div class="avatar" :style="{ backgroundImage: item.picUrl }"></div>' +
+      '</div>' +
+      '<div class="entry-text">' +
+        '{{item.action}}' +
+      '</div>' +
+      '<div class="entry-sub">' +
+        '{{item.datetime}}' +
+      '</div>' + 
+    '</div>'
+});
+
+Vue.component('content-item', {
   props: ['item'],
 
   template:
     '<li>' + 
-      '<span>{{item.title}}</span>' +
-      '<button @click="fireClick" class="fire-button mdl-button mdl-js-button mdl-button--accent">' + 
-        '<span class="mdl-badge" v-bind:data-badge="(item.fires ? item.fires.length : 0)">' + 
-          '<i class="material-icons md-fire md-30 md-light">whatshot</i>' + 
-        '</span>' + 
-      '</button>' + 
-      /* '<div v-for="fire in item.fires">' +
-        '{{fire.user}}' + 
-      '</div>' + */
+      '<span class="item-title mdl-cell mdl-cell--12-col mdl-cell--6-col-tablet mdl-cell--3-col-desktop">{{item.title}}</span>' +
+      '<span class="item-buttons mdl-cell mdl-cell--12-col mdl-cell--6-col-tablet mdl-cell--3-col-desktop">' + 
+        '<button @click="fireClick" class="fire-button mdl-button mdl-js-button mdl-button--accent">' + 
+          '<span :id="fullFireBadgeId" class="mdl-badge fire-badge" v-bind:data-badge="(item.fires ? item.fires.length : 0)">' + 
+            '<i class="material-icons md-fire md-30 md-light">whatshot</i>' + 
+          '</span>' + 
+          '<div class="mdl-tooltip" :data-mdl-for="fullFireBadgeId">' +
+            '3 People fired this' + 
+          '</div>' +
+        '</button>' + 
+      '</span>' +
     '</li>',
 
-    methods:
-      {
+    computed: {
+      fullFireBadgeId: function() { 
+        return "fire-badge-" + this.item.key;
+      }
+    },
+
+    methods: {
         fireClick: function(event) {
           this.$emit('fireclick', this.item.key);
         }
     }
 });
 
-
-
-/* -- Initialize vue with dummy values -- */
-
+/* -- Initialize vue -- */
 var app = new Vue({
+  // Vue-Router
+  router,
 
-  el: '#main-layout',
-  chatMsg: '...',
-  newEntry: '...',
+  // HTML Element to be mounted by the app
+  el: ('#main-layout'),
 
+  // All App Data is here
   data: {
+    // Constants
     TYPE_MOVIE: 'movie',
     TYPE_TVSHOW: 'tvshow',
     TYPE_WEB: 'web',
-    TYPE_APPL: 'appl',
+    TYPE_MOBILEAPP: 'mobileapp',
 
-    tabState: TYPE_MOVIE,
+    // Models
+    chatMsg: '',
+    newEntry: {
+      name: '',
+      note: '',
+      category: ''
+    },
+    tabState: 'movie',
 
+    // Content Panels
     panels: [
-      { key: 0, id: 'movies-panel', items: [] },
-      { key: 1, id: 'shows-panel', items: [] },
-      { key: 2, id: 'web-panel', items: [] },
-      { key: 3, id: 'apps-panel', items: [] },
+      { key: 0, id: 'movie', items: [], title: 'Movies' },
+      { key: 1, id: 'tvshow', items: [], title: 'TV Shows' },
+      { key: 2, id: 'web', items: [], title: 'Web Stuff'},
+      { key: 3, id: 'mobileapp', items: [], title: 'Mobile Apps' },
     ],    
 
-    chatMessages: [
-      // { key: '1', name: 'a', text: 't', picUrl: 'null', imageUri: 'null' }
-    ],
-    logEntries: [
-    ],
-
-    content: [
-    ]
+    // Data Arrays
+    chatMessages: [],
+    logEntries: [],
+    content: []
+  },
+  // Called after app is fully loaded
+  ready: function() {
   },
 
-  // filters: {
-  //   reverse: function(array) {
-  //     return array.slice().reverse();
-  //   }
-  // },
+  // computed properties
+  computed: {
+    toTitleCase: function() {
+      return this.tabState.charAt(0).toUpperCase() + this.tabState.slice(1);
+    }
+  },
 
+  // methods
   methods: {
     setTabState: function(newState) {
       this.tabState = newState;
@@ -92,8 +190,8 @@ var app = new Vue({
     removeChatMessage: function (index) {
       this.chatMessages.splice(index, 1);
     },
-    pushContentItem: function(key, type, title, fires) {
-      this.content.push( {key: key, type: type, title: title, fires: fires} );
+    pushContentItem: function(key, type, title, note, fires) {
+      this.content.push( {key: key, type: type, title: title, note: note, fires: fires} );
     },
     pushLogEntry: function(key, action, picUrl, datetime) {
       this.logEntries.push({ key: key, action: action, picUrl: picUrl, datetime: datetime });
@@ -106,6 +204,23 @@ var app = new Vue({
     },
     updateContentItem: function(ind, updatedItem) {
       Vue.set(app.content, ind, updatedItem);
+    },
+    submitChatMsg: function () {
+      yonsel.saveChatEntry();
+    },
+    submitEntry: function() {
+      yonsel.saveContentEntry();
+    },
+    resetObjValues: function(obj) {
+      for (var o in obj) {
+        obj[o] =   '';
+      }
+    },
+    isObjAllValuesTrue: function(obj) {
+      for(var o in obj) {
+          if(!obj[o]) return false;
+      }
+      return true;
     }
   }
 });
@@ -122,9 +237,6 @@ function Yonsel() {
 
   // Shortcuts to DOM Elements.
   this.messageList = document.getElementById('messages');
-  this.messageForm = document.getElementById('message-form');
-  this.messageInput = document.getElementById('message');
-  this.submitButton = document.getElementById('submit');
   this.submitImageButton = document.getElementById('submitImage');
   this.imageForm = document.getElementById('image-form');
   this.mediaCapture = document.getElementById('mediaCapture');
@@ -136,27 +248,9 @@ function Yonsel() {
 
   this.logger = document.getElementById('logger');
 
-  this.entryForm = document.getElementById('content-entry-form');
-  this.entryInput = document.getElementById('content-entry');
-  this.submitEntry = document.getElementById('submit-entry');
-
   // Saves message on form submit.
-  this.messageForm.addEventListener('submit', this.saveChatEntry.bind(this));
   this.signOutButton.addEventListener('click', this.signOut.bind(this));
   this.signInButton.addEventListener('click', this.signIn.bind(this));
-
-  // Save Entries to Firebase
-  this.entryForm.addEventListener('submit', this.saveContentEntry.bind(this));
-
-  // Toggle for the button.
-  var buttonTogglingHandler = this.toggleButton.bind(this);
-  this.messageInput.addEventListener('keyup', buttonTogglingHandler);
-  this.messageInput.addEventListener('change', buttonTogglingHandler);
-
-  // Toggle for the entry button.
-  var entryButtonTogglingHandler = this.toggleEntryButton.bind(this);
-  this.entryInput.addEventListener('keyup', entryButtonTogglingHandler);
-  this.entryInput.addEventListener('change', entryButtonTogglingHandler);
 
   // Events for image upload.
   this.submitImageButton.addEventListener('click', function() {
@@ -197,7 +291,7 @@ Yonsel.prototype.loadContent = function() {
   // Loads all data and listens for data changes.
   var setContentEntry = function(data) {
     var val = data.val();
-    this.displayContentEntry(data.key, val.type, val.title, val.fires);
+    this.displayContentEntry(data.key, val.type, val.title, val.note, val.fires);
   }.bind(this);
 
   // Updates content entry
@@ -208,7 +302,7 @@ Yonsel.prototype.loadContent = function() {
     // If the item exists, update all fields to the ones retrieved from FireBase
     if (currentItem) {
       var ind = app.content.indexOf(currentItem);
-      var updatedItem = { key: data.key, type: val.type, title: val.title, fires: val.fires };
+      var updatedItem = { key: data.key, type: val.type, title: val.title, note: val.note, fires: val.fires };
       app.updateContentItem(ind, updatedItem);
     }
   }.bind(this);
@@ -218,33 +312,31 @@ Yonsel.prototype.loadContent = function() {
 }
 
 // Displays a content entry in the UI (movies, shows, etc)
-Yonsel.prototype.displayContentEntry = function(key, type, title, fires) {
-  app.pushContentItem(key, type, title, fires);
+Yonsel.prototype.displayContentEntry = function(key, type, title, note, fires) {
+  app.pushContentItem(key, type, title, note, fires);
 };
 
-// Saves a new entry to the firebase DB
-Yonsel.prototype.saveContentEntry = function(e) {
-  e.preventDefault();
-
+// Saves a new entry to Firebase DB
+Yonsel.prototype.saveContentEntry = function() {
   // Check that the user entered a message and is signed in.
-  if (app.newEntry && this.checkSignedInWithMessage()) {
-    var currentUser = this.auth.currentUser;
-
+  if (app.newEntry.name && app.newEntry.note && app.newEntry.category && this.checkSignedInWithMessage()) {
     // Get the current entry typed first so the Input can be cleared before waiting on firebase push
-    var entryValue = app.newEntry;
+    var entryVal = app.newEntry.name;
+    var noteVal = app.newEntry.note;
+    var catVal = app.newEntry.category;
 
     // Clear entry text field and SEND button state.
-    app.newEntry = '';
-    this.toggleEntryButton();
+    app.resetObjValues(app.newEntry);
 
     // Add a new content entry to the Firebase Database.
     this.contentRef.push({
-      title: entryValue,
-      type: app.tabState,
+      title: entryVal,
+      note: noteVal,
+      type: catVal,
       fires: []
     }).then(function() {
       // emit logger action
-      this.emitLog(ACTION_ADD, currentUser.displayName, entryValue, app.tabState);
+      this.emitLog(ACTION_ADD, this.auth.currentUser.displayName, entryVal, app.tabState);
     }.bind(this)).catch(function(error) {
       console.error('Error writing new entry to Firebase Database', error);
     });
@@ -330,9 +422,7 @@ Yonsel.prototype.displayChatEntry = function(key, name, text, picUrl, imageUri) 
 };
 
 // Saves a new message on the Firebase DB.
-Yonsel.prototype.saveChatEntry = function(e) {
-  e.preventDefault();
-
+Yonsel.prototype.saveChatEntry = function() {
   // Check that the user entered a message and is signed in.
   if (app.chatMsg && this.checkSignedInWithMessage()) {
     var currentUser = this.auth.currentUser;
@@ -343,7 +433,6 @@ Yonsel.prototype.saveChatEntry = function(e) {
 
     // Clear message text field and SEND button state.
     app.chatMsg = '';
-    this.toggleButton();
 
     // Add a new message entry to the Firebase Database.
     this.messagesRef.push({
@@ -450,29 +539,9 @@ function toTitleCase(str) {
     });
 }
 
-// Enables or disables the submit button depending on the values of the input
-// fields.
-Yonsel.prototype.toggleButton = function() {
-  if (app.chatMsg) {
-    this.submitButton.removeAttribute('disabled');
-  } else {
-    this.submitButton.setAttribute('disabled', 'true');
-  }
-};
-
-// Enables or disables the submit button depending on the values of the input fields
-Yonsel.prototype.toggleEntryButton = function() {
-  if (app.newEntry) {
-    this.submitEntry.removeAttribute('disabled');
-  } else {
-    this.submitEntry.setAttribute('disabled', 'true');
-  }
-};
-
 // Update scrolling in chat after messages have finished loading
 Yonsel.prototype.chatScrollTop = function() {
   this.messageList.scrollTop = this.messageList.scrollHeight;
-  // this.messageInput.focus();
 }
 Yonsel.prototype.loggerScrollTop = function() {
   this.logger.scrollTop = this.logger.scrollHeight;
@@ -624,9 +693,63 @@ Yonsel.prototype.checkSetup = function() {
   }
 };
 
-/* -- Window -- */
+/* -- The Movie DB -- */
+function tmdb_init() {
+  var API_KEY = "43f6e648581011b26dbe13469943e32b";
+  var API_LANG = "en-US";
+  var API_ADULT = "false";
+  var API_PAGE = "1";
+  var API_QUERY = "rush";
 
+  var tmdbAPI = {
+    baseUrl: "https://api.themoviedb.org/3/",
+    queryTypes: {
+      searchMovie: "search/movie?"
+    },
+    queryStrings: {
+      apiKey: "&api_key=",
+      lang: "&language=",
+      adult: "include_adult=",
+      page: "&page=",
+      query: "&query="
+    }
+  }
+
+  var settings = {
+    "async": true,
+    "crossDomain": true,
+    "url":  tmdbAPI["baseUrl"] +
+            tmdbAPI["queryTypes"]["searchMovie"] +
+            tmdbAPI["queryStrings"]["adult"] +
+            API_ADULT +
+            tmdbAPI["queryStrings"]["page"] +
+            API_PAGE +
+            tmdbAPI["queryStrings"]["query"] +
+            API_QUERY +
+            tmdbAPI["queryStrings"]["lang"] +
+            API_LANG +
+            tmdbAPI["queryStrings"]["apiKey"] + 
+            API_KEY,
+    "method": "GET",
+    "headers": {},
+    "data": "{}"
+  }
+
+  $.ajax(settings).done(function (response) {
+    if (response) {
+      if (response.results) {
+        if (response.results[0]) {
+          var movie = response.results[0];
+          //alert(movie.poster_path);
+        }
+      }
+    }
+  });
+}
+
+/* -- Window -- */
 window.onload = function() {
   window.yonsel = new Yonsel();
+  tmdb_init();
 };
  

@@ -169,9 +169,26 @@ main {
   }
 
 /* -----------------
+    Prologue
+   ------------------
+*/
+
+#prologue-container h2 {
+  padding: 30px;
+  font-size: 150%;
+  font-weight: bold;
+}
+
+/* -----------------
     Content (movies, etc)
    ------------------
 */
+
+.content-items {
+  min-height: 320px;
+  max-height: 320px;
+}
+
 .yonsel-entry {
 
 }
@@ -182,11 +199,9 @@ main {
 */
 .mdl-card__title {
   height: 50px;
-  margin: 0;
   padding: 0;
+  vertical-align: center;
   font-size: 100%;
-  margin: 10px;
-  padding: 10px;
 }
 
 .mdl-card__supporting-text {
@@ -219,6 +234,9 @@ main {
   .data-entry:first-of-type {
     border-top-width: 0;
   }
+  .data-entry .item-title {
+    font-size: 110%;
+  }
   .data-entry .fire-button {
     margin: 0 0 0 6px;
     padding: 0;
@@ -234,12 +252,12 @@ main {
     display: table-cell;
     vertical-align: top;
   }
-  .data-entry .message {
+  .data-entry .entry-text {
     display: table-cell;
     width: calc(100% - 40px);
     padding: 5px 0 5px 10px;
   }
-  .data-entry .name {
+  .data-entry .entry-sub {
     display: inline-block;
     width: 100%;
     padding-left: 40px;
@@ -319,4 +337,44 @@ main {
     height: 33px;
     background-size: 33px;
   }
+}
+
+/* -----------------
+    Category Select
+   ------------------
+*/
+.select-wrap {
+  display:inline-block;
+  position:relative;
+  border-left:1px solid #cccccc; 
+  border-right:1px solid #cccccc;
+}
+  .select-wrap::after {
+    display:block;
+    width:0px;
+    height:0px;
+    content:"　";
+    position:absolute;
+    right:0.5em;
+    top:50%;
+    margin-top:-0.25em;
+    border-top:0.5em solid #777777;
+    border-left:0.5em solid transparent;
+    border-right:0.5em solid transparent;
+    
+    
+    -moz-pointer-events: none;
+    -webkit-pointer-events: none;
+    pointer-events: none;
+  }
+  
+.select-wrap select {
+  -webkit-appearance:none;
+  -moz-appearance:none;
+  appearance:none;
+  border:none;
+  padding: 0.5em 2em 0.5em 0.5em;
+  background: transparent;
+  position:relative;
+  cursor:pointer;
 }

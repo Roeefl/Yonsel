@@ -121,7 +121,10 @@ main {
   .material-icons.orange600 { color: #FB8C00; }
   .material-icons.md-fire {
     color: rgb(245, 130, 12);
-}
+  }
+  .material-icons.md-accent {
+    color: #FF5252;
+  }
 
 /* -----------------
     Header
@@ -135,8 +138,8 @@ main {
     margin-left: 10px;
   }
   .mdl-layout__header-row .material-icons {
-  position: relative;
-  top: 6px;
+    position: relative;
+    top: 6px;
   }
 
 #user-container {
@@ -187,10 +190,20 @@ main {
 .content-items {
   min-height: 320px;
   max-height: 320px;
+  font-size: 100%;
+}
+.content-items .material-icons {
+  margin-right: 8px;
+  position: relative;
+  top: 3px;
 }
 
-.yonsel-entry {
+.item-title {
+  color: rgb(20, 20, 20);
+}
 
+.item-desc .item-note {
+  color: rgba(50, 50, 50, 0.8);
 }
 
 /* -----------------
@@ -222,6 +235,12 @@ main {
     Data Entry: Chat Message / Log Entry / Content Entry
    ------------------
 */
+
+.content-list a {
+  cursor: pointer;
+  text-decoration: none;
+}
+
 .data-entry {
   display: block;
   margin-top: 10px;
@@ -348,6 +367,7 @@ main {
   position:relative;
   border-left:1px solid #cccccc; 
   border-right:1px solid #cccccc;
+  width: 100%;
 }
   .select-wrap::after {
     display:block;
@@ -367,7 +387,7 @@ main {
     -webkit-pointer-events: none;
     pointer-events: none;
   }
-  
+
 .select-wrap select {
   -webkit-appearance:none;
   -moz-appearance:none;
@@ -376,5 +396,5 @@ main {
   padding: 0.5em 2em 0.5em 0.5em;
   background: transparent;
   position:relative;
-  cursor:pointer;
+  cursor: pointer;
 }

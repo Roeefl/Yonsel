@@ -183,7 +183,7 @@
              </div>       
           </div>     
 
-          <div id="content-display" class="mdl-tabs mdl-js-tabs mdl-js-ripple-effect mdl-cell mdl-cell--12-col"> 
+          <div id="content-display" class="mdl-tabs mdl-js-tabs mdl-js-ripple-effect"> 
             <div class="mdl-tabs__tab-bar">
               <tab-item v-for="tab in panels"
                         class="mdl-tabs__tab"
@@ -191,18 +191,19 @@
                         @tabclick="setTabState(tab.id)" >
               </tab-item>
             </div>
-            <div class="content-items card-content">
+            <div class="content-items card-content mdl-grid">
               <panel-item v-for="panel in panels"
-                          class="mdl-tabs__panel center-panel"
+                          class="mdl-tabs__panel center-panel mdl-cell mdl-cell--12-col"
                           :panel="panel" >
-                <ul slot="contentItems">
+                <div class="content-list" slot="contentItems">
                   <content-item  v-for="item in filterContent(panel.id)"
                                 :id="item.key"
                                 class="data-entry mdl-grid"
                                 :item="item"
+                                href="#"
                                 @fireclick="toggleFire(arguments[0])" >
                   </content-item>
-                </ul>
+                </div>
               </panel-item>
             </div>
           </div>

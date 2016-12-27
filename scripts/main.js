@@ -101,9 +101,18 @@ Vue.component('content-item', {
   props: ['item'],
 
   template:
-    '<li>' + 
-      '<span class="item-title mdl-cell mdl-cell--12-col mdl-cell--6-col-tablet mdl-cell--3-col-desktop">{{item.title}}</span>' +
-      '<span class="item-buttons mdl-cell mdl-cell--12-col mdl-cell--6-col-tablet mdl-cell--3-col-desktop">' + 
+    '<a>' + 
+      '<div class="item-desc mdl-cell mdl-cell--6-col">' +
+        '<h2 class="item-title">' +
+          '<i class="material-icons md-18 md-light md-accent">tablet</i>' +
+          '{{item.title}}' + 
+        '</h2 >' +
+        '<h3 class="item-note">' +
+          '<i class="material-icons md-18 md-light md-fire">message</i>' +
+          '{{item.note}}' +
+        '</h3>' +
+      '</div>' +
+      '<div class="item-buttons mdl-cell mdl-cell--6-col">' + 
         '<button @click="fireClick" class="fire-button mdl-button mdl-js-button mdl-button--accent">' + 
           '<span :id="fullFireBadgeId" class="mdl-badge fire-badge" v-bind:data-badge="(item.fires ? item.fires.length : 0)">' + 
             '<i class="material-icons md-fire md-30 md-light">whatshot</i>' + 
@@ -112,8 +121,8 @@ Vue.component('content-item', {
             '3 People fired this' + 
           '</div>' +
         '</button>' + 
-      '</span>' +
-    '</li>',
+      '</div>' +
+    '</a>',
 
     computed: {
       fullFireBadgeId: function() { 
@@ -149,7 +158,8 @@ var app = new Vue({
     newEntry: {
       name: '',
       note: '',
-      category: ''
+      category: '',
+      tags: ''
     },
     tabState: 'movie',
 
@@ -190,8 +200,8 @@ var app = new Vue({
     removeChatMessage: function (index) {
       this.chatMessages.splice(index, 1);
     },
-    pushContentItem: function(key, type, title, note, fires) {
-      this.content.push( {key: key, type: type, title: title, note: note, fires: fires} );
+    pushContentItem: function(key, type, title, note, tags, fires) {
+      this.content.push( {key: key, type: type, title: title, note: note, tags: tags, fires: fires} );
     },
     pushLogEntry: function(key, action, picUrl, datetime) {
       this.logEntries.push({ key: key, action: action, picUrl: picUrl, datetime: datetime });
@@ -204,6 +214,11 @@ var app = new Vue({
     },
     updateContentItem: function(ind, updatedItem) {
       Vue.set(app.content, ind, updatedItem);
+    },
+    resetAllData: function() {
+      // Vue.set(this, chatMessages, []);
+      // Vue.set(this, content, []);
+      // Vue.set(this, logEntries, []);
     },
     submitChatMsg: function () {
       yonsel.saveChatEntry();
@@ -274,9 +289,6 @@ Yonsel.prototype.initFirebase = function() {
 
   // Initiates Firebase auth and listen to auth state changes.
   this.auth.onAuthStateChanged(this.onAuthStateChanged.bind(this));
-
-  this.loadLogger();
-  this.loadContent();
 };
 
 /* -- Content Functions -- */
@@ -291,7 +303,7 @@ Yonsel.prototype.loadContent = function() {
   // Loads all data and listens for data changes.
   var setContentEntry = function(data) {
     var val = data.val();
-    this.displayContentEntry(data.key, val.type, val.title, val.note, val.fires);
+    this.displayContentEntry(data.key, val.type, val.title, val.note, val.tags, val.fires);
   }.bind(this);
 
   // Updates content entry
@@ -302,7 +314,7 @@ Yonsel.prototype.loadContent = function() {
     // If the item exists, update all fields to the ones retrieved from FireBase
     if (currentItem) {
       var ind = app.content.indexOf(currentItem);
-      var updatedItem = { key: data.key, type: val.type, title: val.title, note: val.note, fires: val.fires };
+      var updatedItem = { key: data.key, type: val.type, title: val.title, note: val.note, tags: val.tags, fires: val.fires };
       app.updateContentItem(ind, updatedItem);
     }
   }.bind(this);
@@ -312,31 +324,31 @@ Yonsel.prototype.loadContent = function() {
 }
 
 // Displays a content entry in the UI (movies, shows, etc)
-Yonsel.prototype.displayContentEntry = function(key, type, title, note, fires) {
-  app.pushContentItem(key, type, title, note, fires);
+Yonsel.prototype.displayContentEntry = function(key, type, title, note, tags, fires) {
+  app.pushContentItem(key, type, title, note, tags, fires);
 };
 
 // Saves a new entry to Firebase DB
 Yonsel.prototype.saveContentEntry = function() {
   // Check that the user entered a message and is signed in.
-  if (app.newEntry.name && app.newEntry.note && app.newEntry.category && this.checkSignedInWithMessage()) {
+  if (app.isObjAllValuesTrue(app.newEntry) && this.checkSignedInWithMessage()) {
     // Get the current entry typed first so the Input can be cleared before waiting on firebase push
-    var entryVal = app.newEntry.name;
-    var noteVal = app.newEntry.note;
-    var catVal = app.newEntry.category;
+    // Deep copy
+    var entryClone = jQuery.extend(true, {}, app.newEntry);
 
     // Clear entry text field and SEND button state.
     app.resetObjValues(app.newEntry);
 
     // Add a new content entry to the Firebase Database.
     this.contentRef.push({
-      title: entryVal,
-      note: noteVal,
-      type: catVal,
+      title: entryClone.name,
+      note: entryClone.note,
+      type: entryClone.category,
+      tags: entryClone.tags,
       fires: []
     }).then(function() {
       // emit logger action
-      this.emitLog(ACTION_ADD, this.auth.currentUser.displayName, entryVal, app.tabState);
+      this.emitLog(ACTION_ADD, this.auth.currentUser.displayName, entryClone.name, app.tabState);
     }.bind(this)).catch(function(error) {
       console.error('Error writing new entry to Firebase Database', error);
     });
@@ -626,6 +638,7 @@ Yonsel.prototype.signIn = function() {
 Yonsel.prototype.signOut = function() {
   // Sign out of Firebase.
   this.auth.signOut();
+  app.resetAllData();
 };
 
 // Triggers when the auth state change for instance when the user signs-in or signs-out.
@@ -648,7 +661,9 @@ Yonsel.prototype.onAuthStateChanged = function(user) {
     this.signInButton.setAttribute('hidden', 'true');
 
     // We load currently existing chat messages.
+    this.loadContent();
     this.loadChat();
+    this.loadLogger();
   } else { // User is signed out!
     // Hide user's profile and sign-out button.
     this.userName.setAttribute('hidden', 'true');

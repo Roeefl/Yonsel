@@ -8,21 +8,6 @@ var USER_NONE = '!';
 
 /* -- Vue Components Registration -- */
 
-const Home = { template: '<div>Home</div>' }
-const Bar = { template: '<div>bar</div>' }
-
-const routes = [
-  { path: '/', component: Home },
-  { path: '/bar', component: Bar }
-]
-
-var router = new VueRouter({
-  mode: 'hash',
-  base: window.location.href,
-  routes: routes
-});
-
-
 Vue.component('tab-item', {
   props: ['tab'], 
 
@@ -139,9 +124,6 @@ Vue.component('content-item', {
 
 /* -- Initialize vue -- */
 var app = new Vue({
-  // Vue-Router
-  router,
-
   // HTML Element to be mounted by the app
   el: ('#main-layout'),
 
@@ -284,7 +266,7 @@ function Yonsel() {
 Yonsel.prototype.initFirebase = function() {
   // Shortcuts to Firebase SDK features.
   this.auth = firebase.auth();
-  this.database = firebase.database();
+  this.database = firebase.database(); 
   this.storage = firebase.storage();
 
   // Initiates Firebase auth and listen to auth state changes.
